@@ -129,7 +129,8 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
+  const portNumber = Number(PORT) || 4000;
+  app.listen(portNumber, '0.0.0.0', () => {
     console.log(`\n======================================================`);
     console.log(`⚡ Ctrl Short Backend running on http://localhost:${PORT}`);
     console.log(`   - URLs API:     http://localhost:${PORT}/urls`);

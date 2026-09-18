@@ -18,6 +18,30 @@ interface DashboardModalProps {
   onOpenAuth: () => void;
 }
 
+/**
+ * Resolves short URLs to use the current browser's accessible host
+ * (LAN IP or domain) rather than 'localhost' when accessed across devices.
+ */
+function getAccessibleUrl(shortUrl: string): string {
+  if (!shortUrl) return '';
+  try {
+    const parsed = new URL(shortUrl);
+    if (
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') &&
+      typeof window !== 'undefined' &&
+      window.location.hostname !== 'localhost' &&
+      window.location.hostname !== '127.0.0.1'
+    ) {
+      parsed.hostname = window.location.hostname;
+      parsed.port = window.location.port || parsed.port;
+      return parsed.toString();
+    }
+    return shortUrl;
+  } catch {
+    return shortUrl;
+  }
+}
+
 export const DashboardModal: React.FC<DashboardModalProps> = ({
   isOpen,
   onClose,
@@ -293,81 +317,83 @@ export const DashboardModal: React.FC<DashboardModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {urls.map((url) => (
-                    <div
-                      key={url.shortCode}
-                      className="p-3.5 sm:p-4 bg-white/5 border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-white/25 transition-all"
-                    >
-                      {/* Link Info */}
-                      <div className="space-y-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <a
-                            href={url.shortUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-mono text-sm sm:text-base font-semibold text-white hover:underline truncate"
-                          >
-                            {url.shortUrl}
-                          </a>
-                          <span
-                            className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                              !url.isActive
-                                ? 'border-red-500/50 text-red-400 bg-red-950/30'
+                  {urls.map((url) => {
+                    const accessibleUrl = getAccessibleUrl(url.shortUrl);
+                    return (
+                      <div
+                        key={url.shortCode}
+                        className="p-3.5 sm:p-4 bg-white/5 border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-white/25 transition-all"
+                      >
+                        {/* Link Info */}
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <a
+                              href={accessibleUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono text-sm sm:text-base font-semibold text-white hover:underline truncate"
+                            >
+                              {accessibleUrl}
+                            </a>
+                            <span
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                                !url.isActive
+                                  ? 'border-red-500/50 text-red-400 bg-red-950/30'
+                                  : url.expiresAt && Date.now() / 1000 > url.expiresAt
+                                  ? 'border-yellow-500/50 text-yellow-400 bg-yellow-950/30'
+                                  : 'border-emerald-500/50 text-emerald-400 bg-emerald-950/30'
+                              }`}
+                            >
+                              {!url.isActive
+                                ? 'Disabled'
                                 : url.expiresAt && Date.now() / 1000 > url.expiresAt
-                                ? 'border-yellow-500/50 text-yellow-400 bg-yellow-950/30'
-                                : 'border-emerald-500/50 text-emerald-400 bg-emerald-950/30'
-                            }`}
+                                ? 'Expired'
+                                : 'Active'}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-white/50 truncate max-w-md font-mono">
+                            ↳ {url.originalUrl}
+                          </p>
+
+                          <div className="flex items-center gap-3 text-[11px] text-white/40 font-mono pt-0.5">
+                            <span>{new Date(url.createdAt).toLocaleDateString()}</span>
+                            <span>•</span>
+                            <span>{url.totalClicks || 0} clicks</span>
+                            {url.expiresAt && (
+                              <>
+                                <span>•</span>
+                                <span>Expires: {new Date(url.expiresAt * 1000).toLocaleDateString()}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(accessibleUrl, url.shortCode)}
+                            className="px-2.5 py-1.5 text-xs font-mono bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
                           >
-                            {!url.isActive
-                              ? 'Disabled'
-                              : url.expiresAt && Date.now() / 1000 > url.expiresAt
-                              ? 'Expired'
-                              : 'Active'}
-                          </span>
-                        </div>
+                            {copiedCode === url.shortCode ? '✓ Copied' : 'Copy'}
+                          </button>
 
-                        <p className="text-xs text-white/50 truncate max-w-md font-mono">
-                          ↳ {url.originalUrl}
-                        </p>
+                          <button
+                            type="button"
+                            onClick={() => setAnalyticsCode(url.shortCode)}
+                            className="px-2.5 py-1.5 text-xs font-mono bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
+                          >
+                            Analytics
+                          </button>
 
-                        <div className="flex items-center gap-3 text-[11px] text-white/40 font-mono pt-0.5">
-                          <span>{new Date(url.createdAt).toLocaleDateString()}</span>
-                          <span>•</span>
-                          <span>{url.totalClicks || 0} clicks</span>
-                          {url.expiresAt && (
-                            <>
-                              <span>•</span>
-                              <span>Expires: {new Date(url.expiresAt * 1000).toLocaleDateString()}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(url.shortUrl, url.shortCode)}
-                          className="px-2.5 py-1.5 text-xs font-mono bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
-                        >
-                          {copiedCode === url.shortCode ? '✓ Copied' : 'Copy'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setAnalyticsCode(url.shortCode)}
-                          className="px-2.5 py-1.5 text-xs font-mono bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
-                        >
-                          Analytics
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setQrUrl({ url: url.shortUrl, shortCode: url.shortCode })}
-                          className="px-2.5 py-1.5 text-xs font-mono bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
-                        >
-                          QR
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => setQrUrl({ url: accessibleUrl, shortCode: url.shortCode })}
+                            className="px-2.5 py-1.5 text-xs font-mono bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
+                          >
+                            QR
+                          </button>
 
                         <button
                           type="button"
@@ -388,7 +414,8 @@ export const DashboardModal: React.FC<DashboardModalProps> = ({
                         </button>
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
               )}
             </div>

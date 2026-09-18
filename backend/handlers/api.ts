@@ -40,7 +40,27 @@ interface APIGatewayEvent {
   };
 }
 
-const DOMAIN_BASE = process.env.BASE_URL || 'http://localhost:5173';
+function getDomainBase(event: APIGatewayEvent): string {
+  // If explicitly configured for production domain
+  if (process.env.BASE_URL && !process.env.BASE_URL.includes('localhost')) {
+    return process.env.BASE_URL;
+  }
+
+  // Dynamically resolve from incoming request host headers
+  const host =
+    event.headers?.['x-forwarded-host'] ||
+    event.headers?.host ||
+    event.headers?.Host;
+
+  if (host) {
+    const proto =
+      event.headers?.['x-forwarded-proto'] ||
+      (host.includes('localhost') || host.startsWith('10.') || host.startsWith('192.168.') || host.startsWith('172.') ? 'http' : 'https');
+    return `${proto}://${host}`;
+  }
+
+  return process.env.BASE_URL || 'http://localhost:5173';
+}
 
 function jsonResponse(statusCode: number, data: unknown) {
   return {
@@ -62,6 +82,7 @@ export async function handler(event: APIGatewayEvent) {
     'GET'
   ).toUpperCase();
   const path = event.rawPath || event.path || '';
+  const domainBase = getDomainBase(event);
 
   // Handle CORS preflight
   if (method === 'OPTIONS') {
@@ -150,7 +171,7 @@ export async function handler(event: APIGatewayEvent) {
           await createUrlRecord(newUrl);
           return jsonResponse(201, {
             ...newUrl,
-            shortUrl: `${DOMAIN_BASE}/r/${newUrl.shortCode}`,
+            shortUrl: `${domainBase}/r/${newUrl.shortCode}`,
           });
         } catch (err: unknown) {
           if ((err as { code?: string }).code === 'COLLISION') {
@@ -211,7 +232,7 @@ export async function handler(event: APIGatewayEvent) {
 
       return jsonResponse(201, {
         ...createdItem,
-        shortUrl: `${DOMAIN_BASE}/r/${createdItem.shortCode}`,
+        shortUrl: `${domainBase}/r/${createdItem.shortCode}`,
       });
     }
 
@@ -220,7 +241,7 @@ export async function handler(event: APIGatewayEvent) {
       const urls = await listUrlsByUser(user.userId);
       const enriched = urls.map((u) => ({
         ...u,
-        shortUrl: `${DOMAIN_BASE}/r/${u.shortCode}`,
+        shortUrl: `${domainBase}/r/${u.shortCode}`,
       }));
       return jsonResponse(200, { urls: enriched });
     }
@@ -275,7 +296,7 @@ export async function handler(event: APIGatewayEvent) {
         }
         return jsonResponse(200, {
           ...urlItem,
-          shortUrl: `${DOMAIN_BASE}/r/${urlItem.shortCode}`,
+          shortUrl: `${domainBase}/r/${urlItem.shortCode}`,
         });
       }
 
@@ -306,7 +327,7 @@ export async function handler(event: APIGatewayEvent) {
           });
           return jsonResponse(200, {
             ...updated,
-            shortUrl: `${DOMAIN_BASE}/r/${updated.shortCode}`,
+            shortUrl: `${domainBase}/r/${updated.shortCode}`,
           });
         } catch (err: unknown) {
           if ((err as { code?: string }).code === 'NOT_FOUND_OR_FORBIDDEN') {
