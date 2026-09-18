@@ -26,14 +26,10 @@ function getAccessibleUrl(shortUrl: string): string {
   if (!shortUrl) return '';
   try {
     const parsed = new URL(shortUrl);
-    if (
-      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') &&
-      typeof window !== 'undefined' &&
-      window.location.hostname !== 'localhost' &&
-      window.location.hostname !== '127.0.0.1'
-    ) {
+    if (typeof window !== 'undefined' && window.location.hostname) {
+      parsed.protocol = window.location.protocol;
       parsed.hostname = window.location.hostname;
-      parsed.port = window.location.port || parsed.port;
+      parsed.port = window.location.port || '';
       return parsed.toString();
     }
     return shortUrl;

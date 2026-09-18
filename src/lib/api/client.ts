@@ -11,7 +11,10 @@ const TOKEN_KEY = 'ctrl_short_token';
 const USER_KEY = 'ctrl_short_user';
 
 export const API_BASE_URL = (
-  (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:4000'
+  (import.meta.env.VITE_API_BASE_URL as string) ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? 'https://rg3t7y7kak.execute-api.ap-south-1.amazonaws.com/prod'
+    : 'http://localhost:4000')
 ).replace(/\/+$/, '');
 
 export function getStoredToken(): string | null {
