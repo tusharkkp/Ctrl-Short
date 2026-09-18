@@ -63,11 +63,11 @@ export const QrModal: React.FC<QrModalProps> = ({ isOpen, onClose, url, shortCod
         <div className="mx-auto w-52 h-52 bg-white p-3 rounded-xl flex items-center justify-center shadow-inner">
           {svgContent ? (
             <div
-              className="w-full h-full [&>svg]:w-full [&>svg]:h-full [&>svg_path]:fill-black"
+              className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
               dangerouslySetInnerHTML={{ __html: svgContent }}
             />
           ) : (
-            <div className="text-black/40 text-xs">Generating QR...</div>
+            <div className="text-black/40 text-xs font-mono">Generating QR...</div>
           )}
         </div>
 

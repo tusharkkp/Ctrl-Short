@@ -14,7 +14,7 @@ export async function generateQrSvg(text: string): Promise<string> {
     type: 'svg',
     margin: 1,
     color: {
-      dark: '#FFFFFF',
+      dark: '#000000', // Crisp black QR modules
       light: '#00000000', // Transparent background
     },
     errorCorrectionLevel: 'M',
