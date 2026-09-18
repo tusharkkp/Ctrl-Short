@@ -115,8 +115,8 @@ app.get('/r/:shortCode', async (req: Request, res: Response): Promise<void> => {
   res.status(response.statusCode).set(response.headers || {}).send(response.body);
 });
 
-// REST API Endpoints: /urls and /urls/*
-app.all('/urls*', async (req: Request, res: Response): Promise<void> => {
+// REST API Endpoints: /urls, /urls/:id, /urls/:id/analytics
+app.all(/^\/urls(\/.*)?$/, async (req: Request, res: Response): Promise<void> => {
   const event = toApiGatewayEvent(req);
   const response = await apiHandler(event);
 
