@@ -16,6 +16,7 @@ import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as path from 'path';
+import * as fs from 'fs';
 
 export class CtrlShortStack extends cdk.Stack {
   public readonly apiEndpoint: cdk.CfnOutput;
@@ -109,7 +110,8 @@ export class CtrlShortStack extends cdk.Stack {
     // 4. AWS LAMBDA CONTROLLERS
     // =========================================================================
 
-    const backendPath = path.join(process.cwd(), 'backend');
+    const backendDistPath = path.join(process.cwd(), 'dist-backend');
+    const backendPath = fs.existsSync(backendDistPath) ? backendDistPath : path.join(process.cwd(), 'backend');
     const codeAsset = lambda.Code.fromAsset(backendPath);
 
     // Redirect Handler (Public, ultra-low latency)

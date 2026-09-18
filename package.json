@@ -9,8 +9,9 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "cdk:synth": "npx cdk synth",
-    "cdk:deploy": "npx cdk deploy",
+    "build:backend": "npx esbuild backend/handlers/redirect.ts --platform=node --target=node20 --bundle --outfile=dist-backend/handlers/redirect.js --external:@aws-sdk/* && npx esbuild backend/handlers/api.ts --platform=node --target=node20 --bundle --outfile=dist-backend/handlers/api.js --external:@aws-sdk/* && npx esbuild backend/handlers/analytics.ts --platform=node --target=node20 --bundle --outfile=dist-backend/handlers/analytics.js --external:@aws-sdk/*",
+    "cdk:synth": "npm run build:backend && npx cdk synth",
+    "cdk:deploy": "npm run build:backend && npx cdk deploy",
     "cdk:destroy": "npx cdk destroy",
     "lint": "oxlint",
     "preview": "vite preview"
