@@ -3,11 +3,15 @@ import React from 'react';
 interface NavbarProps {
   isMobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
+  onOpenDashboard?: () => void;
+  onOpenDocs?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   isMobileMenuOpen,
   onToggleMobileMenu,
+  onOpenDashboard,
+  onOpenDocs,
 }) => {
   return (
     <header className="fixed top-0 left-0 w-full z-10 px-5 sm:px-8 py-4 sm:py-5 flex justify-between items-center">
@@ -35,43 +39,48 @@ export const Navbar: React.FC<NavbarProps> = ({
         className="hidden md:flex items-center text-[20px] text-white"
         aria-label="Primary Navigation"
       >
-        <a
-          href="#shorten"
-          className="hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-0.5"
+        <button
+          type="button"
+          onClick={onOpenDashboard}
+          className="hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-0.5 cursor-pointer bg-transparent border-0 text-white font-[inherit] text-[inherit]"
         >
           Shorten
-        </a>
+        </button>
         <span className="select-none" aria-hidden="true">,</span>
-        <a
-          href="#analytics"
-          className="ml-1 hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-0.5"
+        <button
+          type="button"
+          onClick={onOpenDashboard}
+          className="ml-1 hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-0.5 cursor-pointer bg-transparent border-0 text-white font-[inherit] text-[inherit]"
         >
           Analytics
-        </a>
+        </button>
         <span className="select-none" aria-hidden="true">,</span>
-        <a
-          href="#api"
-          className="ml-1 hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-0.5"
+        <button
+          type="button"
+          onClick={onOpenDocs}
+          className="ml-1 hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-0.5 cursor-pointer bg-transparent border-0 text-white font-[inherit] text-[inherit]"
         >
           API
-        </a>
+        </button>
         <span className="select-none" aria-hidden="true">,</span>
-        <a
-          href="#docs"
-          className="ml-1 hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-0.5"
+        <button
+          type="button"
+          onClick={onOpenDocs}
+          className="ml-1 hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-0.5 cursor-pointer bg-transparent border-0 text-white font-[inherit] text-[inherit]"
         >
           Docs
-        </a>
+        </button>
       </nav>
 
       {/* Right: Desktop CTA */}
       <div className="hidden md:flex items-center">
-        <a
-          href="#dashboard"
-          className="text-[20px] text-white underline underline-offset-2 hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-1"
+        <button
+          type="button"
+          onClick={onOpenDashboard}
+          className="text-[20px] text-white underline underline-offset-2 hover:opacity-60 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded px-1 cursor-pointer bg-transparent border-0 font-[inherit]"
         >
           Open Dashboard
-        </a>
+        </button>
       </div>
 
       {/* Right: Mobile Hamburger Button */}

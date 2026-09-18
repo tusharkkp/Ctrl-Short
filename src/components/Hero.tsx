@@ -1,10 +1,15 @@
 import React from 'react';
 import { useTypewriter } from '../hooks/useTypewriter';
+import type { ActionPillType } from './ActionPills';
 import { ActionPills } from './ActionPills';
 
 const TYPEWRITER_TEXT = 'Short links. Clear analytics. Total control.';
 
-export const Hero: React.FC = () => {
+interface HeroProps {
+  onActionClick?: (action: ActionPillType) => void;
+}
+
+export const Hero: React.FC<HeroProps> = ({ onActionClick }) => {
   const { displayed, done } = useTypewriter({
     text: TYPEWRITER_TEXT,
     speed: 38,
@@ -40,7 +45,7 @@ export const Hero: React.FC = () => {
         </p>
 
         {/* 3 & 4. Action Pills */}
-        <ActionPills />
+        <ActionPills onActionClick={onActionClick} />
       </div>
     </main>
   );

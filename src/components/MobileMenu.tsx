@@ -3,17 +3,25 @@ import React from 'react';
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenDashboard?: () => void;
+  onOpenDocs?: () => void;
 }
 
-const MENU_ITEMS = [
-  { label: 'Shorten', href: '#shorten' },
-  { label: 'Analytics', href: '#analytics' },
-  { label: 'API', href: '#api' },
-  { label: 'Docs', href: '#docs' },
-  { label: 'Open Dashboard', href: '#dashboard' },
-];
+export const MobileMenu: React.FC<MobileMenuProps> = ({
+  isOpen,
+  onClose,
+  onOpenDashboard,
+  onOpenDocs,
+}) => {
+  const handleClick = (action: string) => {
+    onClose();
+    if (action === 'dashboard' || action === 'shorten' || action === 'analytics') {
+      onOpenDashboard?.();
+    } else if (action === 'api' || action === 'docs') {
+      onOpenDocs?.();
+    }
+  };
 
-export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
   return (
     <div
       id="mobile-menu-overlay"
@@ -23,16 +31,41 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
       }`}
     >
       <nav className="flex flex-col gap-8" aria-label="Mobile Navigation">
-        {MENU_ITEMS.map((item) => (
-          <a
-            key={item.label}
-            href={item.href}
-            onClick={onClose}
-            className="text-[32px] font-medium text-white hover:opacity-70 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded w-fit"
-          >
-            {item.label}
-          </a>
-        ))}
+        <button
+          type="button"
+          onClick={() => handleClick('shorten')}
+          className="text-[32px] font-medium text-white hover:opacity-70 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded w-fit text-left cursor-pointer bg-transparent border-0 font-[inherit]"
+        >
+          Shorten
+        </button>
+        <button
+          type="button"
+          onClick={() => handleClick('analytics')}
+          className="text-[32px] font-medium text-white hover:opacity-70 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded w-fit text-left cursor-pointer bg-transparent border-0 font-[inherit]"
+        >
+          Analytics
+        </button>
+        <button
+          type="button"
+          onClick={() => handleClick('api')}
+          className="text-[32px] font-medium text-white hover:opacity-70 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded w-fit text-left cursor-pointer bg-transparent border-0 font-[inherit]"
+        >
+          API
+        </button>
+        <button
+          type="button"
+          onClick={() => handleClick('docs')}
+          className="text-[32px] font-medium text-white hover:opacity-70 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded w-fit text-left cursor-pointer bg-transparent border-0 font-[inherit]"
+        >
+          Docs
+        </button>
+        <button
+          type="button"
+          onClick={() => handleClick('dashboard')}
+          className="text-[32px] font-medium text-white hover:opacity-70 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded w-fit text-left cursor-pointer bg-transparent border-0 font-[inherit]"
+        >
+          Open Dashboard
+        </button>
       </nav>
     </div>
   );
