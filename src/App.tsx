@@ -9,12 +9,25 @@ import { DashboardModal } from './components/dashboard/DashboardModal';
 import { AuthModal } from './components/modals/AuthModal';
 import { ApiDocsModal } from './components/modals/ApiDocsModal';
 
+import { API_BASE_URL } from './lib/api/client';
+
 export function AppContent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [isDocsOpen, setIsDocsOpen] = useState(false);
+
+  // Fallback: If browser hits /r/:shortCode directly, forward to backend redirect endpoint
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/r/')) {
+      const shortCode = path.replace(/^\/r\//, '');
+      if (shortCode) {
+        window.location.replace(`${API_BASE_URL}/r/${shortCode}`);
+      }
+    }
+  }, []);
 
   // Close modals or mobile menu on Escape key
   useEffect(() => {
