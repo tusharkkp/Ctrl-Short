@@ -9,8 +9,9 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "cdk:synth": "cdk synth",
-    "cdk:deploy": "cdk deploy",
+    "cdk:synth": "npx cdk synth",
+    "cdk:deploy": "npx cdk deploy",
+    "cdk:destroy": "npx cdk destroy",
     "lint": "oxlint",
     "preview": "vite preview"
   },
