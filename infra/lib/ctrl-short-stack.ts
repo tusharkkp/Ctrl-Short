@@ -202,10 +202,22 @@ export class CtrlShortStack extends cdk.Stack {
       },
     });
 
-    // Cognito Authorizer for protected endpoints
-    const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
-      cognitoUserPools: [userPool],
-      authorizerName: 'CtrlShort-CognitoAuth',
+    api.addGatewayResponse('Default4XXResponse', {
+      type: apigateway.ResponseType.DEFAULT_4XX,
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+        'Access-Control-Allow-Headers': "'Content-Type,Authorization'",
+        'Access-Control-Allow-Methods': "'GET,POST,PATCH,DELETE,OPTIONS'",
+      },
+    });
+
+    api.addGatewayResponse('Default5XXResponse', {
+      type: apigateway.ResponseType.DEFAULT_5XX,
+      responseHeaders: {
+        'Access-Control-Allow-Origin': "'*'",
+        'Access-Control-Allow-Headers': "'Content-Type,Authorization'",
+        'Access-Control-Allow-Methods': "'GET,POST,PATCH,DELETE,OPTIONS'",
+      },
     });
 
     const lambdaApiIntegration = new apigateway.LambdaIntegration(apiHandler);
@@ -216,37 +228,27 @@ export class CtrlShortStack extends cdk.Stack {
     const shortCodeResource = rResource.addResource('{shortCode}');
     shortCodeResource.addMethod('GET', lambdaRedirectIntegration);
 
-    // Protected /urls routes
+    // Public Auth endpoints: POST /auth/signup & POST /auth/signin
+    const authResource = api.root.addResource('auth');
+    const signupResource = authResource.addResource('signup');
+    signupResource.addMethod('POST', lambdaApiIntegration);
+
+    const signinResource = authResource.addResource('signin');
+    signinResource.addMethod('POST', lambdaApiIntegration);
+
+    // /urls routes (Authenticated inside Lambda via authenticateRequest)
     const urlsResource = api.root.addResource('urls');
-    urlsResource.addMethod('GET', lambdaApiIntegration, {
-      authorizer: cognitoAuthorizer,
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-    });
-    urlsResource.addMethod('POST', lambdaApiIntegration, {
-      authorizer: cognitoAuthorizer,
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-    });
+    urlsResource.addMethod('GET', lambdaApiIntegration);
+    urlsResource.addMethod('POST', lambdaApiIntegration);
 
     const singleUrlResource = urlsResource.addResource('{id}');
-    singleUrlResource.addMethod('GET', lambdaApiIntegration, {
-      authorizer: cognitoAuthorizer,
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-    });
-    singleUrlResource.addMethod('PATCH', lambdaApiIntegration, {
-      authorizer: cognitoAuthorizer,
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-    });
-    singleUrlResource.addMethod('DELETE', lambdaApiIntegration, {
-      authorizer: cognitoAuthorizer,
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-    });
+    singleUrlResource.addMethod('GET', lambdaApiIntegration);
+    singleUrlResource.addMethod('PATCH', lambdaApiIntegration);
+    singleUrlResource.addMethod('DELETE', lambdaApiIntegration);
 
     // /urls/{id}/analytics
     const analyticsResource = singleUrlResource.addResource('analytics');
-    analyticsResource.addMethod('GET', lambdaApiIntegration, {
-      authorizer: cognitoAuthorizer,
-      authorizationType: apigateway.AuthorizationType.COGNITO,
-    });
+    analyticsResource.addMethod('GET', lambdaApiIntegration);
 
     // =========================================================================
     // 7. CLOUDWATCH ALARMS

@@ -89,7 +89,70 @@ export async function handler(event: APIGatewayEvent) {
     return jsonResponse(204, {});
   }
 
-  // 1. Authenticate Request
+  // Public Auth Endpoints: POST /auth/signup
+  if (method === 'POST' && (path === '/auth/signup' || path.endsWith('/auth/signup'))) {
+    let body: { email?: string; password?: string };
+    try {
+      body = JSON.parse(event.body || '{}');
+    } catch {
+      return jsonResponse(400, {
+        error: { code: 'BAD_REQUEST', message: 'Malformed JSON payload.' },
+      });
+    }
+
+    const { email, password } = body;
+    if (!email || !password || password.length < 8) {
+      return jsonResponse(400, {
+        error: { code: 'BAD_REQUEST', message: 'Email and password (minimum 8 characters) required.' },
+      });
+    }
+
+    const token = `dev-token-${email}`;
+    const user = {
+      id: `usr_${crypto.createHash('md5').update(email).digest('hex').slice(0, 12)}`,
+      email,
+      createdAt: new Date().toISOString(),
+    };
+
+    return jsonResponse(201, {
+      message: 'Account created successfully.',
+      token,
+      user,
+    });
+  }
+
+  // Public Auth Endpoints: POST /auth/signin
+  if (method === 'POST' && (path === '/auth/signin' || path.endsWith('/auth/signin'))) {
+    let body: { email?: string; password?: string };
+    try {
+      body = JSON.parse(event.body || '{}');
+    } catch {
+      return jsonResponse(400, {
+        error: { code: 'BAD_REQUEST', message: 'Malformed JSON payload.' },
+      });
+    }
+
+    const { email, password } = body;
+    if (!email || !password) {
+      return jsonResponse(400, {
+        error: { code: 'BAD_REQUEST', message: 'Email and password required.' },
+      });
+    }
+
+    const token = `dev-token-${email}`;
+    const user = {
+      id: `usr_${crypto.createHash('md5').update(email).digest('hex').slice(0, 12)}`,
+      email,
+      createdAt: new Date().toISOString(),
+    };
+
+    return jsonResponse(200, {
+      token,
+      user,
+    });
+  }
+
+  // 1. Authenticate Protected Requests
   const authHeader = event.headers?.authorization || event.headers?.Authorization;
   const authorizerClaims = event.requestContext?.authorizer?.jwt?.claims;
   const user = await authenticateRequest(authHeader, authorizerClaims);
