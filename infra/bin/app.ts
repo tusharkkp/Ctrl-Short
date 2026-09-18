@@ -10,8 +10,8 @@ const app = new cdk.App();
 
 new CtrlShortStack(app, 'CtrlShortStack', {
   env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+    account: process.env.CDK_DEFAULT_ACCOUNT || '548171706026',
+    region: process.env.CDK_DEFAULT_REGION || process.env.AWS_REGION || 'ap-south-1',
   },
   description: 'Ctrl Short — Serverless URL Shortener & Analytics Platform Infrastructure',
 });
