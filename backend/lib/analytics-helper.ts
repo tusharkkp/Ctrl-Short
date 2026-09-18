@@ -60,10 +60,10 @@ export function parseUserAgent(uaString: string = ''): {
 
   // 3. Operating System
   let os = 'Unknown';
-  if (/windows nt 10\.0|windows nt 11\.0/i.test(ua)) os = 'Windows 11/10';
+  if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
+  else if (/windows nt 10\.0|windows nt 11\.0/i.test(ua)) os = 'Windows 11/10';
   else if (/windows/i.test(ua)) os = 'Windows';
   else if (/macintosh|mac os x/i.test(ua)) os = 'macOS';
-  else if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
   else if (/android/i.test(ua)) os = 'Android';
   else if (/linux/i.test(ua)) os = 'Linux';
   else if (/cros/i.test(ua)) os = 'ChromeOS';

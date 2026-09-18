@@ -73,6 +73,13 @@ export function validateCustomAlias(alias: string): { valid: boolean; error?: st
     return { valid: false, error: 'Custom alias cannot be empty.' };
   }
 
+  if (RESERVED_WORDS.has(trimmed.toLowerCase())) {
+    return {
+      valid: false,
+      error: `'${trimmed}' is a reserved system path and cannot be used as a custom alias.`,
+    };
+  }
+
   if (trimmed.length < 3 || trimmed.length > 32) {
     return {
       valid: false,
@@ -84,13 +91,6 @@ export function validateCustomAlias(alias: string): { valid: boolean; error?: st
     return {
       valid: false,
       error: 'Custom alias can only contain alphanumeric characters, underscores, and dashes.',
-    };
-  }
-
-  if (RESERVED_WORDS.has(trimmed.toLowerCase())) {
-    return {
-      valid: false,
-      error: `'${trimmed}' is a reserved system path and cannot be used as a custom alias.`,
     };
   }
 
