@@ -10,8 +10,9 @@ import type { ApiError, User } from '../../types/api';
 const TOKEN_KEY = 'ctrl_short_token';
 const USER_KEY = 'ctrl_short_user';
 
-export const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:4000';
+export const API_BASE_URL = (
+  (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:4000'
+).replace(/\/+$/, '');
 
 export function getStoredToken(): string | null {
   try {
@@ -75,7 +76,8 @@ export class ApiRequestError extends Error {
  * Standardized typed HTTP fetch wrapper.
  */
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${cleanEndpoint}`;
   const token = getStoredToken();
 
   const headers: Record<string, string> = {
