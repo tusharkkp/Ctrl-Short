@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/r/:code",
+      "destination": "https://rg3t7y7kak.execute-api.ap-south-1.amazonaws.com/prod/r/:code"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
