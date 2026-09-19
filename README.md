@@ -544,5 +544,4 @@ Designed and engineered with care by **Tushar Kaldate**.
 * **Live Deployment:** [https://ctrl-short.vercel.app/](https://ctrl-short.vercel.app/)
 
 <div align="center">
-⭐ If you find this project valuable, please consider giving it a star on GitHub! ⭐
 </div>
