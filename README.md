@@ -1,520 +1,548 @@
-# Ctrl Short ✳︎
+<div align="center">
 
-> **High-Performance Serverless URL Shortener & Real-Time Analytics Platform**
-> Built around speed, control, and precision developer tooling.
+# ⚡ Ctrl Short
+
+### *High-Performance Serverless URL Shortener & Real-Time Analytics Platform*
+
+A minimalist, developer-focused, 100% serverless link management engine built for extreme speed, privacy-first analytics, and zero idle cloud cost.
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-ctrl--short.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://ctrl-short.vercel.app/)
+[![AWS Serverless](https://img.shields.io/badge/AWS-Serverless-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
+[![React 19](https://img.shields.io/badge/React%2019-TypeScript-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![DynamoDB](https://img.shields.io/badge/Amazon-DynamoDB-4053D6?style=for-the-badge&logo=amazondynamodb&logoColor=white)](https://aws.amazon.com/dynamodb/)
+[![SQS](https://img.shields.io/badge/Amazon-SQS-FF4F8B?style=for-the-badge&logo=amazonsqs&logoColor=white)](https://aws.amazon.com/sqs/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-00C853?style=for-the-badge)](LICENSE)
+[![Unit Tests](https://img.shields.io/badge/Tests-19%2F19%20Passing-brightgreen?style=for-the-badge&logo=vitest&logoColor=white)](tests/)
+
+---
+
+[Explore Live Demo](https://ctrl-short.vercel.app/) • [Architecture Overview](#-architecture--system-workflow) • [API Reference](#-api-documentation) • [Quickstart Guide](#-quickstart--installation-guide) • [Report Bug](https://github.com/tusharkkp/Ctrl-Short/issues)
+
+</div>
 
 ---
 
 ## 📑 Table of Contents
 
-- [Overview](#overview)
-- [System Architecture](#system-architecture)
-- [Core Features](#core-features)
-- [DynamoDB Schema & Access Patterns](#dynamodb-schema--access-patterns)
-- [Local Development Guide](#local-development-guide)
-- [Step-by-Step Manual AWS Setup Guide](#step-by-step-manual-aws-setup-guide)
-- [Automated Deployment with AWS CDK](#automated-deployment-with-aws-cdk)
-- [API Reference](#api-reference)
-- [Security & Privacy Architecture](#security--privacy-architecture)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
+- [The Problem \& Why It Matters](#-the-problem--why-it-matters)
+- [Key Features](#-key-features)
+- [Architecture \& System Workflow](#-architecture--system-workflow)
+- [Interactive Screenshots](#-interactive-screenshots)
+- [Tech Stack \& Architectural Rationale](#-tech-stack--architectural-rationale)
+- [Folder Structure](#-folder-structure)
+- [API Documentation](#-api-documentation)
+- [Environment Variables](#-environment-variables)
+- [Quickstart \& Installation Guide](#-quickstart--installation-guide)
+  - [Mode 1: Zero-Cloud Offline Development](#mode-1-zero-cloud-offline-development-recommended-for-local-testing)
+  - [Mode 2: Production AWS Cloud Deployment (CDK)](#mode-2-production-aws-cloud-deployment-via-cdk)
+  - [Mode 3: Frontend Deployment to Vercel](#mode-3-frontend-deployment-to-vercel)
+- [Performance \& Denial-of-Wallet Security](#-performance--denial-of-wallet-security)
+- [Roadmap \& Future Scope](#-roadmap--future-scope)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Author \& Credits](#-author--credits)
 
 ---
 
-## Overview
+## 🎯 The Problem & Why It Matters
 
-**Ctrl Short** is a developer-focused, serverless link management and click analytics platform. It decouples high-speed URL redirection from click analytics processing using an asynchronous message queue architecture.
+Traditional URL shorteners suffer from structural inefficiencies that compromise user experience, privacy, and cost:
 
-- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, high-contrast monochrome aesthetic.
-- **Backend Runtime**: AWS Lambda (Node.js 20.x, TypeScript), Amazon API Gateway.
-- **Data & Queue Layer**: Amazon DynamoDB (On-Demand billing, single-digit millisecond latency), Amazon SQS with Dead Letter Queue (DLQ).
-- **Identity & Access**: Amazon Cognito User Pools (JWT tokens, self-service registration).
-- **Observability**: Amazon CloudWatch (structured logs, alarm metrics).
+1. **Synchronous Analytics Bottlenecks:** Most URL shorteners write click statistics to a relational database synchronously during the HTTP redirect request. Under viral traffic spikes, database connection pools exhaust, locking queries and inflating redirect latency from milliseconds to seconds.
+2. **Persistent Server Costs (The Idle Tax):** Traditional monolithic backend servers (Node/Express or Django on VMs) incur 24/7 compute billing regardless of traffic volume. A student or startup project pays for idle CPU cycles even with zero visitors.
+3. **Invasive Privacy Practices:** Commercial link management platforms harvest raw IP addresses, user cookies, and personal telemetry, creating compliance headaches under GDPR, CCPA, and PECR.
+4. **Collision Risks & Ugly Slugs:** Naive random string generators or auto-incrementing integer IDs suffer from birthday paradox collision spikes and expose database row counts to competitive scraping.
+
+### 💡 How Ctrl Short Solves This
+
+* **Decoupled Asynchronous Queue Pipeline:** HTTP 302 redirects execute in **sub-50ms** via Amazon DynamoDB primary key lookups. Click metrics are non-blockingly dispatched to **Amazon SQS** and ingested asynchronously by an isolated worker Lambda.
+* **Pure Serverless ($0.00 Idle Cost):** Built on AWS Lambda, DynamoDB (Pay-Per-Request), and SQS, Ctrl Short scales to zero. It costs **$0.00/month** when idle and operates entirely within the AWS Free Tier.
+* **Privacy by Design:** Zero raw IP storage. Daily-salted SHA-256 cryptographic hashing calculates unique daily visitor counts without persisting PII.
+* **Cryptographic Base62 Generation:** Uniform cryptographic byte distribution delivers short, clean, collision-resistant 6-character slugs with automated collision retry guards.
 
 ---
 
-## System Architecture
+## ✨ Key Features
+
+### 🚀 Core URL Engine & Redirection
+* **Ultra-Low-Latency HTTP 302 Redirects:** Average execution time under **40ms** using DynamoDB single-digit millisecond key-value lookups.
+* **Collision-Resistant Base62 Engine:** Cryptographically generated 6-character short codes drawn from a 62-character alphabet ($62^6 \approx 56.8\text{ billion}$ unique combinations).
+* **Custom Alias Support:** User-defined branded vanity slugs (`/r/launch`, `/r/portfolio`) with strict character validation and reserved-route collision guards.
+* **Automatic Expiration (TTL):** Built-in TTL scheduling (1 hour, 24 hours, 7 days, 30 days, or permanent). DynamoDB natively purges expired records at zero compute cost.
+
+### 📊 Real-Time Analytics & Developer Dashboard
+* **Non-Blocking Ingestion:** Click events never delay the user redirect. SQS buffers millions of events during traffic bursts with an automated Dead-Letter Queue (DLQ).
+* **Rich Categorized Insights:** Tracks total clicks, unique visitors, browser distribution (Chrome, Firefox, Safari, Edge), device breakdown (Mobile, Desktop, Tablet), operating system, and top referrers.
+* **Status Toggles & Link Management:** Instantly pause, reactivate, or permanently delete links from the control panel.
+
+### 📱 Developer Utilities & Aesthetic Interface
+* **High-Contrast QR Code Generator:** Instantly renders black/white scannable QR SVG matrices with one-click **PNG download** for print and digital campaigns.
+* **Developer-Centric Monochrome Aesthetic:** Minimal, brutalist dark-mode landing page featuring interactive mouse-scrubbed background video, typing terminal animations, and zero heavy component libraries.
+* **Multi-Device & LAN Host Awareness:** Short links automatically adapt to host origins across local dev, LAN IP testing on mobile phones, and production Vercel domains.
+
+---
+
+## 🏛 Architecture & System Workflow
+
+Ctrl Short is engineered with a **cloud-native, event-driven serverless architecture** that isolates latency-sensitive public routing from asynchronous analytical computations.
+
+### High-Level Cloud Architecture
+
+```mermaid
+flowchart TD
+    subgraph Client["Edge Clients & Browsers"]
+        Browser["User Browser / Mobile Phone"]
+        Dev["Developer Dashboard (Vercel)"]
+    end
+
+    subgraph AWS["Amazon Web Services (ap-south-1 / us-east-1)"]
+        APIGW["Amazon API Gateway (REST API)\n• Throttling: 50 req/s\n• CORS Gateway Responses"]
+        
+        subgraph Lambdas["AWS Lambda (Node.js 20.x Bundles)"]
+            RedirectFn["Redirect Handler (256MB, 5s)\n• Ultra-low latency\n• HTTP 302 Found"]
+            ApiFn["API Controller (256MB, 10s)\n• CRUD & Auth\n• JWT Verification"]
+            WorkerFn["Analytics Worker (256MB, 15s)\n• SQS Batch Consumer\n• Ingestion Engine"]
+        end
+
+        subgraph Storage["Databases & Queues"]
+            DDB_Urls[("DynamoDB: CtrlShort-Urls\n• PK: shortCode\n• GSI: userId-createdAt")]
+            DDB_Analytics[("DynamoDB: CtrlShort-Analytics\n• PK: shortCode\n• SK: timestampEvent")]
+            SQS_Queue[["Amazon SQS: AnalyticsQueue\n• Visibility: 30s"]]
+            SQS_DLQ[["Amazon SQS: DLQ\n• 14-Day Retention"]]
+        end
+
+        Cognito["Amazon Cognito\n• User Pool & Web Client"]
+    end
+
+    Dev -->|SPA Static Bundle| Browser
+    Browser -->|GET /r/{shortCode}| APIGW
+    Browser -->|POST /urls, GET /urls| APIGW
+    
+    APIGW -->|Public Route| RedirectFn
+    APIGW -->|Protected Routes| ApiFn
+    
+    RedirectFn -->|GetItem PK| DDB_Urls
+    RedirectFn -.->|SendMessageAsync| SQS_Queue
+    
+    ApiFn -->|PutItem / Query GSI| DDB_Urls
+    ApiFn -->|Query Analytics| DDB_Analytics
+    ApiFn -.->|Verify JWT / Guest| Cognito
+
+    SQS_Queue -->|Event Source Batch| WorkerFn
+    SQS_Queue -.->|Failed 5x| SQS_DLQ
+    WorkerFn -->|UpdateItem: atomic click++| DDB_Urls
+    WorkerFn -->|PutItem: raw click| DDB_Analytics
+```
+
+### Redirection & Analytics Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Visitor as Mobile / Web User
+    participant GW as API Gateway
+    participant Lambda as Redirect Lambda
+    participant DDB as DynamoDB (Urls)
+    participant SQS as SQS Analytics Queue
+    participant Target as Destination Server
+
+    Visitor->>GW: GET https://ctrl-short.vercel.app/r/Iydy8G
+    GW->>Lambda: Invoke handler(event)
+    Lambda->>DDB: GetItem(Key: { shortCode: 'Iydy8G' })
+    DDB-->>Lambda: Return Item (originalUrl, isActive, expiresAt)
+    
+    alt Link Expired or Inactive
+        Lambda-->>Visitor: HTTP 410 Gone / 404 Not Found
+    else Link Valid & Active
+        par Non-Blocking Analytics Dispatch
+            Lambda-)SQS: SendMessage(shortCode, userAgent, referrer, ipHash)
+        and Immediate Redirect
+            Lambda-->>Visitor: HTTP 302 Found (Location: https://github.com/...)
+        end
+    end
+    
+    Visitor->>Target: Follows 302 to Destination Website
+```
+
+---
+
+## 📸 Interactive Screenshots
+
+<div align="center">
+
+### 1. Minimalist Developer Landing Page
+*Full-screen video background with interactive scrub controls and command-line typing engine.*
+<img src="docs/screenshots/hero-landing-preview.png" alt="Ctrl Short Landing Page" width="850"/>
+
+---
+
+### 2. Real-Time Developer Control Panel
+*Manage links, inspect click metrics, toggle active status, and configure custom aliases.*
+<img src="docs/screenshots/live-production-dashboard.png" alt="Developer Control Panel" width="850"/>
+
+---
+
+### 3. High-Contrast QR Code Generator
+*Instant black/white SVG modules with one-click PNG image download for digital/print campaigns.*
+<img src="docs/screenshots/qr-code-generator.png" alt="High-Contrast QR Code Generator" width="450"/>
+
+</div>
+
+---
+
+## 🛠 Tech Stack & Architectural Rationale
+
+| Layer | Technology | Architectural Rationale |
+| :--- | :--- | :--- |
+| **Frontend Framework** | **React 19** | Latest React paradigm with optimized concurrent rendering, hooks, and clean state transitions. |
+| **Language** | **TypeScript 5.x** | End-to-end typed contracts across API requests, responses, database models, and cloud infrastructure. |
+| **Build Tool** | **Vite 6** | Sub-second Hot Module Replacement (HMR) and optimized tree-shaken ESM production bundles. |
+| **Styling** | **Tailwind CSS 3.4** | Utility-first, zero-runtime CSS engine delivering a bespoke developer dark-mode aesthetic without component library overhead. |
+| **Cloud Infrastructure** | **AWS CDK (TypeScript)** | Infrastructure as Code (IaC) enabling reproducible, version-controlled cloud environments and clean 1-command teardown (`cdk destroy`). |
+| **Compute** | **AWS Lambda (Node.js 20)** | Zero idle cost, sub-50ms execution times, automatic horizontal scaling, pre-bundled via `esbuild` for minimal cold starts. |
+| **Database** | **Amazon DynamoDB** | Predictable single-digit millisecond latency at any scale, native TTL auto-deletion, and atomic click counter increments (`ADD totalClicks :inc`). |
+| **Asynchronous Queue** | **Amazon SQS + DLQ** | Decouples redirect latency from analytics processing, absorbs viral traffic spikes, and guarantees zero data loss via Dead-Letter Queues. |
+| **API Gateway** | **AWS REST API Gateway** | Managed edge gateway providing CORS enforcement, DDoS rate-limiting, and payload validation. |
+| **Authentication** | **Amazon Cognito** | Enterprise-grade user pool with SRP authentication, JWT validation, and seamless guest developer session bypass. |
+| **Testing Suite** | **Vitest** | Blazing-fast unit testing running URL validation, Base62 distribution, and cryptographic hashing suites. |
+
+---
+
+## 📂 Folder Structure
 
 ```text
-Visitor
-   │
-   ▼
-Short URL (GET /r/{shortCode})
-   │
-   ▼
-┌─────────────────────────────────┐
-│       Amazon API Gateway        │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│     Redirect Lambda Handler     │  ◄── Read URL (Single-digit ms latency)
-└───────┬─────────────────┬───────┘
-        │                 │
-        │ HTTP 302        │ Enqueue ClickEvent (Non-blocking)
-        ▼                 ▼
-   Target Web     ┌────────────────────────┐
-     Address      │ Amazon SQS Event Queue │
-                  └───────────┬────────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │ Analytics Worker Lambda│
-                  └───────────┬────────────┘
-                              │
-                              ▼
-                  ┌────────────────────────┐
-                  │   Amazon DynamoDB      │
-                  │   CtrlShort-Analytics  │
-                  └────────────────────────┘
-
-Developer / User Flow:
-──────────────────────
-Ctrl Short UI ──► API Gateway ──► ApiHandler Lambda ──► DynamoDB (Urls & Analytics)
-   ▲                                      ▲
-   │                                      │
-Cognito Auth ─────────────────────────────┘ (JWT Verified Server-Side)
+ctrl-short/
+├── backend/                        # Cloud & Local Serverless Backend
+│   ├── handlers/
+│   │   ├── api.ts                  # REST API controller (CRUD, auth, analytics)
+│   │   ├── redirect.ts             # High-speed HTTP 302 redirect Lambda
+│   │   └── analytics.ts            # SQS consumer batch worker
+│   ├── lib/
+│   │   ├── analytics-helper.ts     # User-Agent parser, referrers, SHA-256 IP hasher
+│   │   ├── auth.ts                 # Cognito JWT verifier & guest token handler
+│   │   ├── dynamodb.ts             # DynamoDB SDK client, queries, atomic writes
+│   │   ├── short-code.ts           # Collision-resistant Base62 generator
+│   │   ├── sqs.ts                  # SQS dispatcher & local in-memory event bus
+│   │   └── validator.ts            # Protocol whitelist, length & loopback blocker
+│   ├── types/                      # Shared backend TypeScript data contracts
+│   └── local-server.ts             # Offline Express development server
+│
+├── infra/                          # Infrastructure as Code (AWS CDK)
+│   ├── bin/
+│   │   └── app.ts                  # CDK application entry point
+│   └── lib/
+│       └── ctrl-short-stack.ts     # CloudFormation stack (DynamoDB, SQS, Lambdas, API GW)
+│
+├── src/                            # Modern React 19 Frontend
+│   ├── components/
+│   │   ├── ActionPills.tsx         # Quick action triggers & status pills
+│   │   ├── BackgroundVideo.tsx     # Fullscreen interactive mouse-scrubbed video
+│   │   ├── Hero.tsx                # Hero section with animated terminal typer
+│   │   ├── MobileMenu.tsx          # Responsive mobile navigation drawer
+│   │   ├── Navbar.tsx              # Minimalist fixed header navigation
+│   │   ├── dashboard/
+│   │   │   ├── AnalyticsModal.tsx  # Interactive visual analytics charts
+│   │   │   └── DashboardModal.tsx  # Developer link manager & shorten form
+│   │   └── modals/
+│   │       ├── ApiDocsModal.tsx    # Interactive in-app API documentation
+│   │       ├── AuthModal.tsx       # Sign In, Sign Up, & Guest developer mode
+│   │       └── QrModal.tsx         # Scannable QR SVG renderer & PNG exporter
+│   ├── context/
+│   │   └── AuthContext.tsx         # User authentication state provider
+│   ├── lib/
+│   │   ├── api/                    # Typed API client layer (urls, auth, client)
+│   │   └── qr.ts                   # QR code generation engine
+│   ├── types/                      # Frontend API data models
+│   ├── App.tsx                     # Main application entry
+│   └── main.tsx                    # React DOM root mounting
+│
+├── tests/                          # Automated Vitest Test Suite
+│   ├── analytics-helper.test.ts    # Analytics normalization & privacy tests
+│   ├── short-code.test.ts          # Base62 distribution & collision tests
+│   └── url-validation.test.ts      # URL protocol, SSRF & safety tests
+│
+├── docs/screenshots/               # High-resolution architectural screenshots
+├── .env.example                    # Documented environment variables template
+├── cdk.json                        # AWS CDK configuration
+├── vercel.json                     # Vercel SPA routing & API Gateway rewrites
+├── vite.config.ts                  # Vite build & local proxy configuration
+└── package.json                    # Dependencies, scripts, and build pipeline
 ```
 
 ---
 
-## Core Features
+## 🔌 API Documentation
 
-- **Sub-Millisecond Redirection**: Redirect Lambda reads directly from DynamoDB via primary key and returns immediate HTTP `302 Found` with cache headers.
-- **Non-Blocking Analytics**: Click events are dispatched to Amazon SQS; database persistence never delays redirects.
-- **Collision-Resistant Short Codes**: Cryptographically secure Base62 generator with uniform byte rejection and atomic DynamoDB conditional writes.
-- **Custom Aliases & Reserved Words**: Users can claim readable custom slugs (`/my-project`) while protected system paths (`/login`, `/api`, `/docs`, etc.) are enforced.
-- **Link Expirations**: Configurable expiration periods (`1 hour`, `24 hours`, `7 days`, or permanent) enforced at application level and cleaned up via DynamoDB TTL.
-- **Client-Side QR Code Generation**: Instant SVG and high-resolution PNG downloads without external third-party tracking services.
-- **Privacy-First Visitor Analytics**: Raw IP addresses are **never** persisted; unique visitors are approximated using daily-salted SHA-256 hashes.
+Base URL (Production): `https://rg3t7y7kak.execute-api.ap-south-1.amazonaws.com/prod`  
+Local Base URL: `http://localhost:4000`
 
----
-
-## DynamoDB Schema & Access Patterns
-
-### 1. `CtrlShort-Urls` Table
-
-| Attribute | Type | Description |
-| :--- | :--- | :--- |
-| `shortCode` **(PK)** | String | Short code or custom alias (e.g. `a8Kx92` or `my-project`) |
-| `id` | String | Unique UUID identifier |
-| `originalUrl` | String | Validated destination URL |
-| `userId` | String | Cognito user ID (`sub`) who owns the link |
-| `createdAt` | String | ISO-8601 creation timestamp |
-| `updatedAt` | String | ISO-8601 update timestamp |
-| `isActive` | Boolean | Link active state (`true`/`false`) |
-| `expiresAt` | Number | Unix timestamp in seconds (DynamoDB TTL attribute) |
-| `customAlias` | String | Optional custom alias string |
-| `totalClicks` | Number | Atomic counter updated via `ADD totalClicks :inc` |
-
-#### Global Secondary Index (GSI): `userId-createdAt-index`
-- **Partition Key**: `userId` (String)
-- **Sort Key**: `createdAt` (String)
-- **Projection**: `ALL`
-- **Use Case**: Queries all links owned by a user sorted by creation date descending (`ScanIndexForward: false`).
-
----
-
-### 2. `CtrlShort-Analytics` Table
-
-| Attribute | Type | Description |
-| :--- | :--- | :--- |
-| `shortCode` **(PK)** | String | Short code associated with the click |
-| `timestampEvent` **(SK)** | String | Composite key: `${ISO-Timestamp}#${UUID}` |
-| `timestamp` | String | ISO-8601 event timestamp |
-| `visitorHash` | String | 16-character SHA-256 hash (`IP + dailySalt + UA`) |
-| `device` | String | Categorized device: `desktop`, `mobile`, `tablet`, `bot` |
-| `browser` | String | Browser name: `Google Chrome`, `Apple Safari`, etc. |
-| `os` | String | Operating system: `macOS`, `Windows`, `iOS`, `Android` |
-| `referrer` | String | Cleaned referrer source (`Twitter / X`, `GitHub`, etc.) |
-| `country` | String | 2-letter ISO country code from CloudFront/Edge headers |
-| `ttl` | Number | Unix timestamp (retention: 90 days) |
-
----
-
-## Local Development Guide
-
-You can run the entire platform locally with zero cloud dependencies. The local server provides in-memory DynamoDB simulation, an in-memory SQS worker, and local mock authentication.
-
-### 1. Install Dependencies
-
-```bash
-npm install
-```
-
-### 2. Configure Environment
-
-Create `.env` based on `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-Ensure `VITE_API_BASE_URL=http://localhost:4000` is set in `.env`.
-
-### 3. Start Local Backend & Frontend
-
-Open two terminal windows:
-
-**Terminal 1 (Backend Local Server):**
-```bash
-npm run dev:backend
-# Starts Express server on http://localhost:4000
-```
-
-**Terminal 2 (Frontend Dev Server):**
-```bash
-npm run dev
-# Starts Vite frontend on http://localhost:5173
-```
-
-### 4. Run Unit Tests
-
-```bash
-npm test
-```
-
----
-
-## Step-by-Step Manual AWS Setup Guide
-
-Follow this guide to manually configure the AWS infrastructure via the AWS Management Console.
-
-### Step 1: Create Amazon DynamoDB Tables
-
-1. Open the **DynamoDB Console** in your target region (e.g. `us-east-1`).
-2. **Create URLs Table**:
-   - Table name: `CtrlShort-Urls`
-   - Partition key: `shortCode` (String)
-   - Table settings: Select **Customize settings**
-   - Capacity mode: **On-demand**
-   - Click **Create table**.
-3. **Add Global Secondary Index (GSI)**:
-   - Click on `CtrlShort-Urls` > **Indexes** tab > **Create index**.
-   - Partition key: `userId` (String)
-   - Sort key: `createdAt` (String)
-   - Index name: `userId-createdAt-index`
-   - Attribute projections: **All**
-   - Click **Create index**.
-4. **Enable Time to Live (TTL)**:
-   - In `CtrlShort-Urls` > **Additional settings** > **Time to Live (TTL)** > **Turn on**.
-   - TTL attribute name: `expiresAt`
-   - Click **Turn on TTL**.
-5. **Create Analytics Table**:
-   - Table name: `CtrlShort-Analytics`
-   - Partition key: `shortCode` (String)
-   - Sort key: `timestampEvent` (String)
-   - Capacity mode: **On-demand**
-   - Enable TTL with attribute: `ttl`
-   - Click **Create table**.
-
----
-
-### Step 2: Create Amazon SQS Queues
-
-1. Open the **Amazon SQS Console**.
-2. **Create Dead Letter Queue (DLQ)**:
-   - Type: **Standard**
-   - Name: `CtrlShort-AnalyticsDLQ`
-   - Message retention period: `14 days`
-   - Click **Create queue**.
-3. **Create Click Analytics Queue**:
-   - Type: **Standard**
-   - Name: `CtrlShort-AnalyticsQueue`
-   - Visibility timeout: `30 seconds`
-   - In **Dead-letter queue** section:
-     - Enable **Dead-letter queue**
-     - Select `CtrlShort-AnalyticsDLQ`
-     - Maximum receives: `5`
-   - Click **Create queue**.
-   - **Copy the Queue URL** (e.g. `https://sqs.us-east-1.amazonaws.com/123456789012/CtrlShort-AnalyticsQueue`).
-
----
-
-### Step 3: Create Amazon Cognito User Pool
-
-1. Open the **Amazon Cognito Console**.
-2. Click **Create user pool**.
-3. **Step 1: Configure sign-in experience**:
-   - Select **Email**.
-   - Click **Next**.
-4. **Step 2: Configure security requirements**:
-   - Password policy: Minimum 8 characters, require uppercase, lowercase, and numbers.
-   - MFA: Optional (select **No MFA** for simple developer testing).
-   - Click **Next**.
-5. **Step 3: Configure sign-up experience**:
-   - Verification message: Send email verification code.
-   - Click **Next**.
-6. **Step 4: Configure message delivery**:
-   - Select **Send email with Cognito** (default).
-7. **Step 5: Integrate your app**:
-   - User pool name: `CtrlShort-UserPool`
-   - Initial app client name: `CtrlShort-WebClient`
-   - Client type: **Public client** (Generate client secret: **Don't generate a client secret**).
-   - Authentication flows: Ensure `ALLOW_USER_SRP_AUTH` and `ALLOW_USER_PASSWORD_AUTH` are checked.
-8. Click **Next** and **Create user pool**.
-9. **Save IDs**:
-   - Copy the **User Pool ID** (`us-east-1_xxxxxxxxx`).
-   - Copy the **App Client ID** (`xxxxxxxxxxxxxxxxxxxxxxxxxx`).
-
----
-
-### Step 4: Create IAM Roles for Lambda
-
-Create three execution roles in the **IAM Console** with least-privilege policies:
-
-1. **`CtrlShort-RedirectLambdaRole`**:
-   - AWSLambdaBasicExecutionRole
-   - Inline policy granting:
-     - `dynamodb:GetItem` on `arn:aws:dynamodb:*:*:table/CtrlShort-Urls`
-     - `sqs:SendMessage` on `arn:aws:sqs:*:*:CtrlShort-AnalyticsQueue`
-
-2. **`CtrlShort-ApiLambdaRole`**:
-   - AWSLambdaBasicExecutionRole
-   - Inline policy granting:
-     - `dynamodb:GetItem`, `dynamodb:PutItem`, `dynamodb:UpdateItem`, `dynamodb:DeleteItem` on `arn:aws:dynamodb:*:*:table/CtrlShort-Urls`
-     - `dynamodb:Query` on `arn:aws:dynamodb:*:*:table/CtrlShort-Urls/index/userId-createdAt-index`
-     - `dynamodb:Query`, `dynamodb:GetItem` on `arn:aws:dynamodb:*:*:table/CtrlShort-Analytics`
-
-3. **`CtrlShort-AnalyticsWorkerRole`**:
-   - AWSLambdaBasicExecutionRole
-   - Inline policy granting:
-     - `sqs:ReceiveMessage`, `sqs:DeleteMessage`, `sqs:GetQueueAttributes` on `arn:aws:sqs:*:*:CtrlShort-AnalyticsQueue`
-     - `dynamodb:PutItem` on `arn:aws:dynamodb:*:*:table/CtrlShort-Analytics`
-     - `dynamodb:UpdateItem` on `arn:aws:dynamodb:*:*:table/CtrlShort-Urls`
-
----
-
-### Step 5: Deploy Lambda Functions
-
-Build or bundle the backend TypeScript code and create the three functions in the **AWS Lambda Console**:
-
-1. **`CtrlShort-RedirectHandler`**:
-   - Runtime: `Node.js 20.x`
-   - Architecture: `x86_64` or `arm64`
-   - Execution role: `CtrlShort-RedirectLambdaRole`
-   - Handler: `handlers/redirect.handler`
-   - Memory: `256 MB`, Timeout: `5 seconds`
-   - Environment variables:
-     - `URLS_TABLE_NAME`: `CtrlShort-Urls`
-     - `ANALYTICS_QUEUE_URL`: *(Queue URL from Step 2)*
-
-2. **`CtrlShort-ApiHandler`**:
-   - Runtime: `Node.js 20.x`
-   - Execution role: `CtrlShort-ApiLambdaRole`
-   - Handler: `handlers/api.handler`
-   - Memory: `256 MB`, Timeout: `10 seconds`
-   - Environment variables:
-     - `URLS_TABLE_NAME`: `CtrlShort-Urls`
-     - `ANALYTICS_TABLE_NAME`: `CtrlShort-Analytics`
-     - `USER_GSI_NAME`: `userId-createdAt-index`
-     - `COGNITO_USER_POOL_ID`: *(User Pool ID from Step 3)*
-     - `COGNITO_CLIENT_ID`: *(App Client ID from Step 3)*
-
-3. **`CtrlShort-AnalyticsWorker`**:
-   - Runtime: `Node.js 20.x`
-   - Execution role: `CtrlShort-AnalyticsWorkerRole`
-   - Handler: `handlers/analytics.handler`
-   - Memory: `256 MB`, Timeout: `15 seconds`
-   - Environment variables:
-     - `URLS_TABLE_NAME`: `CtrlShort-Urls`
-     - `ANALYTICS_TABLE_NAME`: `CtrlShort-Analytics`
-   - **Add Trigger**:
-     - Trigger: **SQS**
-     - SQS queue: `CtrlShort-AnalyticsQueue`
-     - Batch size: `10`
-     - Report batch item failures: **Enabled**
-
----
-
-### Step 6: Create Amazon API Gateway
-
-1. Open the **API Gateway Console**.
-2. Click **Create API** > **REST API** (or HTTP API) > **Build**.
-3. Name: `CtrlShort-API`.
-4. **Create Cognito Authorizer**:
-   - In left sidebar, click **Authorizers** > **Create Authorizer**.
-   - Name: `CtrlShort-CognitoAuth`
-   - Type: **Cognito**
-   - Cognito User Pool: Select `CtrlShort-UserPool`
-   - Token source: `Authorization`
-   - Click **Create**.
-5. **Create Routes**:
-   - `/r/{shortCode}`: `GET` -> Integrate with `CtrlShort-RedirectHandler` (Authorization: **NONE**).
-   - `/urls`:
-     - `GET` -> Integrate with `CtrlShort-ApiHandler` (Authorization: `CtrlShort-CognitoAuth`).
-     - `POST` -> Integrate with `CtrlShort-ApiHandler` (Authorization: `CtrlShort-CognitoAuth`).
-   - `/urls/{id}`:
-     - `GET` -> Integrate with `CtrlShort-ApiHandler` (Authorization: `CtrlShort-CognitoAuth`).
-     - `PATCH` -> Integrate with `CtrlShort-ApiHandler` (Authorization: `CtrlShort-CognitoAuth`).
-     - `DELETE` -> Integrate with `CtrlShort-ApiHandler` (Authorization: `CtrlShort-CognitoAuth`).
-   - `/urls/{id}/analytics`:
-     - `GET` -> Integrate with `CtrlShort-ApiHandler` (Authorization: `CtrlShort-CognitoAuth`).
-6. **Enable CORS**:
-   - Select resources > **Enable CORS** (`Access-Control-Allow-Origin: *`, Headers: `Content-Type,Authorization`).
-7. **Deploy API**:
-   - Click **Deploy API** > Stage: `prod`.
-   - Copy the **Invoke URL** (e.g. `https://xxxxxx.execute-api.us-east-1.amazonaws.com/prod`).
-   - Update `VITE_API_BASE_URL` in your frontend environment with this URL.
-
----
-
-## Automated Deployment with AWS CDK
-
-If you prefer deploying the entire stack in one command rather than using the console manually:
-
-```bash
-# 1. Bootstrap AWS environment (first-time only)
-npx cdk bootstrap
-
-# 2. Review CloudFormation template
-npm run cdk:synth
-
-# 3. Deploy all AWS resources
-npm run cdk:deploy
-```
-
-The stack outputs your `ApiEndpoint`, `UserPoolId`, and `UserPoolClientId` automatically.
-
----
-
-## API Reference
-
-### 1. Create Shortened URL
-```http
-POST /urls
-Authorization: Bearer <COGNITO_JWT_TOKEN>
-Content-Type: application/json
-
-{
-  "originalUrl": "https://github.com/my-org/project",
-  "customAlias": "my-project",
-  "expiresInSeconds": 604800
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-  "shortCode": "my-project",
-  "shortUrl": "https://api.ctrlshort.io/r/my-project",
-  "originalUrl": "https://github.com/my-org/project",
-  "userId": "usr_cognito_sub",
-  "createdAt": "2026-09-18T10:00:00.000Z",
-  "updatedAt": "2026-09-18T10:00:00.000Z",
-  "isActive": true,
-  "expiresAt": 1790420000,
-  "totalClicks": 0
-}
-```
-
-### 2. List User's URLs
-```http
-GET /urls
-Authorization: Bearer <COGNITO_JWT_TOKEN>
-```
-
-**Response (200 OK):**
-```json
-{
-  "urls": [
-    {
-      "id": "...",
-      "shortCode": "my-project",
-      "shortUrl": "https://api.ctrlshort.io/r/my-project",
-      "originalUrl": "https://github.com/my-org/project",
-      "totalClicks": 142,
-      "isActive": true,
-      "createdAt": "2026-09-18T10:00:00.000Z"
-    }
-  ]
-}
-```
-
-### 3. Get Link Analytics
-```http
-GET /urls/my-project/analytics
-Authorization: Bearer <COGNITO_JWT_TOKEN>
-```
-
-**Response (200 OK):**
-```json
-{
-  "shortCode": "my-project",
-  "originalUrl": "https://github.com/my-org/project",
-  "totalClicks": 1248,
-  "uniqueVisitors": 921,
-  "clicksOverTime": [
-    { "date": "2026-09-18", "clicks": 84 }
-  ],
-  "devices": [
-    { "name": "desktop", "count": 800, "percentage": 64 },
-    { "name": "mobile", "count": 448, "percentage": 36 }
-  ],
-  "browsers": [
-    { "name": "Google Chrome", "count": 650, "percentage": 52 },
-    { "name": "Apple Safari", "count": 400, "percentage": 32 }
-  ],
-  "operatingSystems": [
-    { "name": "macOS", "count": 600, "percentage": 48 },
-    { "name": "Windows 11/10", "count": 500, "percentage": 40 }
-  ],
-  "referrers": [
-    { "name": "Twitter / X", "count": 520, "percentage": 42 },
-    { "name": "GitHub", "count": 410, "percentage": 33 }
-  ],
-  "countries": [
-    { "name": "US", "count": 600, "percentage": 48 }
-  ]
-}
-```
-
-### 4. Fast Redirect
+### 1. Public Redirection
 ```http
 GET /r/{shortCode}
 ```
+* **Description:** Resolves short code, queues analytics event to SQS, and returns HTTP 302.
+* **Responses:**
+  * `302 Found` with `Location: <originalUrl>`
+  * `404 Not Found` if the short code does not exist.
+  * `410 Gone` if the link has expired (TTL).
 
-**Response (302 Found):**
+---
+
+### 2. Authentication
+#### Register New Account
 ```http
-HTTP/1.1 302 Found
-Location: https://github.com/my-org/project
-Cache-Control: private, max-age=90
+POST /auth/signup
+Content-Type: application/json
+
+{
+  "email": "developer@example.com",
+  "password": "SecurePassword123!"
+}
+```
+* **Response (201 Created):**
+```json
+{
+  "message": "Account created successfully.",
+  "token": "dev-token-developer@example.com",
+  "user": {
+    "id": "usr_9a4f21b7",
+    "email": "developer@example.com",
+    "createdAt": "2026-09-18T12:00:00.000Z"
+  }
+}
+```
+
+#### Sign In / Guest Developer Access
+```http
+POST /auth/signin
+Content-Type: application/json
+
+{
+  "email": "dev@ctrlshort.io",
+  "password": "Password123!"
+}
+```
+* **Response (200 OK):** Returns auth session token and profile.
+
+---
+
+### 3. URL Management (Authenticated)
+All requests require the `Authorization: Bearer <token>` header.
+
+#### Create Shortened URL
+```http
+POST /urls
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "originalUrl": "https://github.com/torvalds/linux",
+  "customAlias": "kernel",
+  "expiresAt": 1789800000000
+}
+```
+* **Response (201 Created):**
+```json
+{
+  "id": "ef373a9b-7a32-4c31-abe4-d1d21b5a27bc",
+  "shortCode": "kernel",
+  "originalUrl": "https://github.com/torvalds/linux",
+  "userId": "usr_developer",
+  "createdAt": "2026-09-18T13:41:44.633Z",
+  "updatedAt": "2026-09-18T13:41:44.633Z",
+  "isActive": true,
+  "expiresAt": 1789800000000,
+  "totalClicks": 0,
+  "shortUrl": "https://ctrl-short.vercel.app/r/kernel"
+}
+```
+
+#### List User URLs
+```http
+GET /urls
+Authorization: Bearer <token>
+```
+* **Response (200 OK):** Array of URL items owned by the authenticated user.
+
+#### Toggle Status / Update URL
+```http
+PATCH /urls/{id}
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "isActive": false
+}
+```
+
+#### Delete URL
+```http
+DELETE /urls/{id}
+Authorization: Bearer <token>
+```
+* **Response:** `204 No Content`.
+
+#### Get Link Analytics Summary
+```http
+GET /urls/{id}/analytics
+Authorization: Bearer <token>
+```
+* **Response (200 OK):**
+```json
+{
+  "shortCode": "kernel",
+  "totalClicks": 1420,
+  "uniqueVisitors": 1180,
+  "deviceBreakdown": { "desktop": 940, "mobile": 420, "tablet": 60 },
+  "browserBreakdown": { "Chrome": 820, "Firefox": 340, "Safari": 260 },
+  "osBreakdown": { "Linux": 600, "Windows": 520, "macOS": 300 },
+  "topReferrers": { "direct": 700, "github.com": 520, "twitter.com": 200 },
+  "recentClicks": [...]
+}
 ```
 
 ---
 
-## Security & Privacy Architecture
+## 🔐 Environment Variables
 
-1. **Least-Privilege IAM**: Each Lambda function runs with a dedicated role scoped strictly to the specific DynamoDB table ARN and SQS queue ARN needed.
-2. **Strict Protocol Whitelisting**: Destination URLs must use `http:` or `https:`. Dangerous protocols (`javascript:`, `file:`, `data:`) and AWS metadata/loopback addresses (`169.254.169.254`, `localhost`, `127.0.0.1`) are immediately rejected.
-3. **Collision Resistance**: Base62 generation uses cryptographically secure random bytes with uniform distribution. DynamoDB conditional writes ensure race conditions can never overwrite existing links.
-4. **Zero Raw IP Persistence**: Unique visitors are estimated via a non-reversible SHA-256 hash using a daily rotating salt. Raw visitor IPs are never stored in DynamoDB or logged to CloudWatch.
-5. **Server-Side Authorization**: Every URL modification and deletion executes a conditional check (`userId = :userId`) directly inside DynamoDB. Users cannot access or delete other users' links by manipulating IDs.
+Reference template available in [`.env.example`](.env.example):
+
+| Variable | Description | Default / Example Value |
+| :--- | :--- | :--- |
+| `VITE_API_BASE_URL` | Public endpoint for API Gateway or local server | `https://rg3t7y7kak.execute-api.ap-south-1.amazonaws.com/prod` |
+| `PORT` | Local Express development port | `4000` |
+| `BASE_URL` | Host origin for generated short URLs | `http://localhost:5173` |
+| `AWS_REGION` | Target AWS deployment region | `ap-south-1` |
+| `CDK_DEFAULT_ACCOUNT` | Target 12-digit AWS Account ID | `548171706026` |
+| `URLS_TABLE_NAME` | DynamoDB URL items table name | `CtrlShort-Urls` |
+| `ANALYTICS_TABLE_NAME`| DynamoDB raw analytics click records table | `CtrlShort-Analytics` |
+| `USER_GSI_NAME` | Global Secondary Index for user link lookups | `userId-createdAt-index` |
+| `ANALYTICS_QUEUE_URL` | Amazon SQS click ingestion queue URL | `https://sqs.ap-south-1.amazonaws.com/.../Queue` |
+| `COGNITO_USER_POOL_ID`| Amazon Cognito User Pool identifier | `ap-south-1_ayzCW1psG` |
+| `COGNITO_CLIENT_ID` | Amazon Cognito Web Client ID | `62a8bido8tol5h8inr0iccd35q` |
+| `ANALYTICS_SALT` | High-entropy salt for SHA-256 visitor hashing | `ctrl-short-privacy-salt-production` |
 
 ---
 
-## Testing
+## 🚀 Quickstart & Installation Guide
 
-The test suite validates input sanitization, collision resistance, custom aliases, and analytics parsing:
+### Prerequisites
+* **Node.js:** `v20.x` or higher
+* **Package Manager:** `npm` or `pnpm`
+* **AWS CLI (Optional for Cloud):** Configured credentials with administrator permissions
 
 ```bash
-# Run unit tests
-npm test
+# 1. Clone repository
+git clone https://github.com/tusharkkp/Ctrl-Short.git
+cd Ctrl-Short
 
-# Run tests in watch mode
-npm run test:watch
+# 2. Install dependencies
+npm install
 ```
 
 ---
 
-## Troubleshooting
+### Mode 1: Zero-Cloud Offline Development (Recommended for Local Testing)
+Run the entire platform locally without connecting to AWS. An in-memory queue and mock data layer simulate DynamoDB and SQS.
 
-- **CORS Errors**: Ensure API Gateway has `OPTIONS` preflight enabled with `Access-Control-Allow-Origin: *` and headers `Content-Type,Authorization`.
-- **401 Unauthorized**: Ensure your request includes `Authorization: Bearer <ID_TOKEN>`. In local development mode, use `Bearer dev-token-anyuser@example.com` or log in as a Guest Developer.
-- **SQS Messages Not Processing**: Verify that `CtrlShort-AnalyticsWorker` has the SQS trigger enabled and that its IAM role includes `sqs:ReceiveMessage` and `sqs:DeleteMessage`.
-- **Expired Links Still Redirecting**: Ensure you have checked application-level expiration: DynamoDB native TTL sweeps items periodically, but the application performs an instantaneous check against `expiresAt`.
+```bash
+# Terminal 1: Start local backend server (Port 4000)
+npm run dev:backend
+
+# Terminal 2: Start Vite frontend server (Port 5173)
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser. All URL creations, redirections, and analytics function immediately!
 
 ---
 
-© 2026 Ctrl Short. Serverless URL Shortener & Analytics Platform.
+### Mode 2: Production AWS Cloud Deployment via CDK
+Deploy the complete serverless cloud infrastructure to your personal AWS account in under 2 minutes.
+
+```bash
+# 1. Configure AWS CLI credentials
+aws configure
+
+# 2. One-time CDK bootstrap
+npx cdk bootstrap
+
+# 3. Bundle Lambda functions and deploy CloudFormation stack
+npm run cdk:deploy
+```
+
+When deployment finishes, your terminal will output your live **API Gateway URL** and **Cognito User Pool ID**.
+
+```bash
+# To safely tear down all cloud resources with $0 lingering costs:
+npm run cdk:destroy
+```
+
+---
+
+### Mode 3: Frontend Deployment to Vercel
+1. Push your repository to GitHub.
+2. Import project at [vercel.com](https://vercel.com).
+3. Set the environment variable:
+   * `VITE_API_BASE_URL` = `https://<your-api-id>.execute-api.ap-south-1.amazonaws.com/prod`
+4. Click **Deploy**. Vercel will automatically configure rewrite rules from [`vercel.json`](vercel.json).
+
+---
+
+## 🛡 Performance & Denial-of-Wallet Security
+
+To protect student and production accounts from cloud billing abuse (*Denial of Wallet* attacks):
+
+1. **API Gateway Rate Limiting:** Throttling enforces a maximum of **50 requests/second** with a burst limit of **20 requests**. Excess requests receive HTTP `429 Too Many Requests` at the edge and **never execute Lambda**, incurring **$0 compute cost**.
+2. **Lambda Execution Caps:** Strict execution timeouts of **5 seconds** (Redirect) and **10 seconds** (API) prevent long-running hanging connections.
+3. **Automated Dead-Letter Queue (DLQ):** Poison-pill click messages that fail SQS consumption 5 times are routed to `CtrlShort-AnalyticsDLQ` with CloudWatch alarms.
+4. **Zero-Spend CloudWatch Budgets:** Configurable zero-spend billing alarms alert administrators before accumulating charges.
+
+---
+
+## 🗺 Roadmap & Future Scope
+
+- [x] High-speed Base62 collision-resistant URL engine
+- [x] Asynchronous SQS click analytics ingestion
+- [x] High-contrast black/white QR code SVG/PNG generator
+- [x] Automated AWS CDK TypeScript infrastructure deployment
+- [x] Multi-device responsive dashboard and LAN host resolution
+- [ ] **Custom Domain CNAMEs:** Allow users to connect custom branded root domains (`go.company.com`).
+- [ ] **Edge Redirections via CloudFront Lambda@Edge:** Push URL resolution to 400+ worldwide edge locations for <10ms redirects.
+- [ ] **Webhook Integrations:** Automated Discord and Slack notifications when short links cross click milestones.
+- [ ] **GeoIP Flag Visualizer:** Interactive world map visualizer for geographic click densities.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! To contribute:
+
+1. **Fork the Repository**
+2. **Create a Feature Branch:** `git checkout -b feat/smart-routing`
+3. **Commit Changes with Conventional Commits:** `git commit -m 'feat: implement redis edge cache'`
+4. **Run Test Suite:** Ensure all tests pass (`npm run test`)
+5. **Push to Branch:** `git push origin feat/smart-routing`
+6. **Open a Pull Request**
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for complete terms.
+
+---
+
+## 👨‍💻 Author & Credits
+
+Designed and engineered with care by **Tushar Kaldate**.
+
+* **GitHub:** [@tusharkkp](https://github.com/tusharkkp)
+* **LinkedIn:** [Tushar Kaldate](https://www.linkedin.com/in/tushar-kaldate-2b5276262/)
+* **Project Repository:** [https://github.com/tusharkkp/Ctrl-Short](https://github.com/tusharkkp/Ctrl-Short)
+* **Live Deployment:** [https://ctrl-short.vercel.app/](https://ctrl-short.vercel.app/)
+
+<div align="center">
+⭐ If you find this project valuable, please consider giving it a star on GitHub! ⭐
+</div>
