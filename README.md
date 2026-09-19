@@ -91,48 +91,48 @@ Ctrl Short is engineered with a **cloud-native, event-driven serverless architec
 
 ```mermaid
 flowchart TD
-    subgraph Client["Edge Clients & Browsers"]
+    subgraph Client["Edge Clients and Browsers"]
         Browser["User Browser / Mobile Phone"]
         Dev["Developer Dashboard (Vercel)"]
     end
 
     subgraph AWS["Amazon Web Services (ap-south-1 / us-east-1)"]
-        APIGW["Amazon API Gateway (REST API)\n• Throttling: 50 req/s\n• CORS Gateway Responses"]
+        APIGW["Amazon API Gateway (REST API)<br/>• Throttling: 50 req/s<br/>• CORS Gateway Responses"]
         
         subgraph Lambdas["AWS Lambda (Node.js 20.x Bundles)"]
-            RedirectFn["Redirect Handler (256MB, 5s)\n• Ultra-low latency\n• HTTP 302 Found"]
-            ApiFn["API Controller (256MB, 10s)\n• CRUD & Auth\n• JWT Verification"]
-            WorkerFn["Analytics Worker (256MB, 15s)\n• SQS Batch Consumer\n• Ingestion Engine"]
+            RedirectFn["Redirect Handler (256MB, 5s)<br/>• Ultra-low latency<br/>• HTTP 302 Found"]
+            ApiFn["API Controller (256MB, 10s)<br/>• CRUD and Auth<br/>• JWT Verification"]
+            WorkerFn["Analytics Worker (256MB, 15s)<br/>• SQS Batch Consumer<br/>• Ingestion Engine"]
         end
 
-        subgraph Storage["Databases & Queues"]
-            DDB_Urls[("DynamoDB: CtrlShort-Urls\n• PK: shortCode\n• GSI: userId-createdAt")]
-            DDB_Analytics[("DynamoDB: CtrlShort-Analytics\n• PK: shortCode\n• SK: timestampEvent")]
-            SQS_Queue[["Amazon SQS: AnalyticsQueue\n• Visibility: 30s"]]
-            SQS_DLQ[["Amazon SQS: DLQ\n• 14-Day Retention"]]
+        subgraph Storage["Databases and Queues"]
+            DDB_Urls[("DynamoDB: CtrlShort-Urls<br/>• PK: shortCode<br/>• GSI: userId-createdAt")]
+            DDB_Analytics[("DynamoDB: CtrlShort-Analytics<br/>• PK: shortCode<br/>• SK: timestampEvent")]
+            SQS_Queue[["Amazon SQS: AnalyticsQueue<br/>• Visibility: 30s"]]
+            SQS_DLQ[["Amazon SQS: DLQ<br/>• 14-Day Retention"]]
         end
 
-        Cognito["Amazon Cognito\n• User Pool & Web Client"]
+        Cognito["Amazon Cognito<br/>• User Pool and Web Client"]
     end
 
-    Dev -->|SPA Static Bundle| Browser
-    Browser -->|GET /r/{shortCode}| APIGW
-    Browser -->|POST /urls, GET /urls| APIGW
+    Dev -->|"SPA Static Bundle"| Browser
+    Browser -->|"GET /r/:shortCode"| APIGW
+    Browser -->|"POST /urls, GET /urls"| APIGW
     
-    APIGW -->|Public Route| RedirectFn
-    APIGW -->|Protected Routes| ApiFn
+    APIGW -->|"Public Route"| RedirectFn
+    APIGW -->|"Protected Routes"| ApiFn
     
-    RedirectFn -->|GetItem PK| DDB_Urls
-    RedirectFn -.->|SendMessageAsync| SQS_Queue
+    RedirectFn -->|"GetItem PK"| DDB_Urls
+    RedirectFn -.->|"SendMessageAsync"| SQS_Queue
     
-    ApiFn -->|PutItem / Query GSI| DDB_Urls
-    ApiFn -->|Query Analytics| DDB_Analytics
-    ApiFn -.->|Verify JWT / Guest| Cognito
+    ApiFn -->|"PutItem / Query GSI"| DDB_Urls
+    ApiFn -->|"Query Analytics"| DDB_Analytics
+    ApiFn -.->|"Verify Token"| Cognito
 
-    SQS_Queue -->|Event Source Batch| WorkerFn
-    SQS_Queue -.->|Failed 5x| SQS_DLQ
-    WorkerFn -->|UpdateItem: atomic click++| DDB_Urls
-    WorkerFn -->|PutItem: raw click| DDB_Analytics
+    SQS_Queue -->|"Event Source Batch"| WorkerFn
+    SQS_Queue -.->|"Failed 5x DLQ"| SQS_DLQ
+    WorkerFn -->|"Atomic Increment"| DDB_Urls
+    WorkerFn -->|"Put Raw Click"| DDB_Analytics
 ```
 
 ### Redirection & Analytics Sequence Flow
@@ -147,9 +147,9 @@ sequenceDiagram
     participant SQS as SQS Analytics Queue
     participant Target as Destination Server
 
-    Visitor->>GW: GET https://ctrl-short.vercel.app/r/Iydy8G
+    Visitor->>GW: GET /r/Iydy8G
     GW->>Lambda: Invoke handler(event)
-    Lambda->>DDB: GetItem(Key: { shortCode: 'Iydy8G' })
+    Lambda->>DDB: GetItem(shortCode: 'Iydy8G')
     DDB-->>Lambda: Return Item (originalUrl, isActive, expiresAt)
     
     alt Link Expired or Inactive
@@ -158,7 +158,7 @@ sequenceDiagram
         par Non-Blocking Analytics Dispatch
             Lambda-)SQS: SendMessage(shortCode, userAgent, referrer, ipHash)
         and Immediate Redirect
-            Lambda-->>Visitor: HTTP 302 Found (Location: https://github.com/...)
+            Lambda-->>Visitor: HTTP 302 Found (Location: destinationUrl)
         end
     end
     
