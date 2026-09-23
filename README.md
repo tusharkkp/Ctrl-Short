@@ -185,7 +185,7 @@ sequenceDiagram
 
 ### 3. High-Contrast QR Code Generator
 *Instant black/white SVG modules with one-click PNG image download for digital/print campaigns.*
-<img src="docs/screenshots/qr-code-generator.png" alt="High-Contrast QR Code Generator" width="450"/>
+<img src="docs/screenshots/QR.png" alt="High-Contrast QR Code Generator" width="450"/>
 
 </div>
 
